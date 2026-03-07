@@ -720,7 +720,7 @@ let audioCtx = null, sfxGain = null;
 function getCtx() {
   if (!audioCtx) {
     audioCtx = new (window.AudioContext || window.webkitAudioContext)();
-    sfxGain = audioCtx.createGain(); sfxGain.gain.value = 0.6;
+    sfxGain = audioCtx.createGain(); sfxGain.gain.value = 1.10;
     sfxGain.connect(audioCtx.destination);
   }
   if (audioCtx.state === 'suspended') audioCtx.resume();
@@ -2022,11 +2022,13 @@ function ucOnCategoryComplete(catKey) {
   if (!nextKey) return;
   if (S.unlockedCats.includes(nextKey)) return;
 
-  const used  = S.usedWords[catKey] || [];
-  const total = CATEGORIES[catKey].words.length;
+  const usedAfterSession = new Set([
+    ...(S.usedWords[catKey] || []),
+    ...G.words.map(w => w.w),
+  ]);
+  const allExhausted = CATEGORIES[catKey].words.every(w => usedAfterSession.has(w.w));
 
-  const sessionWillComplete = G.words.every(w => w.found || !S.usedWords[catKey]?.includes(w.w));
-  if (used.length + G.foundWords.length + 1 >= total || sessionWillComplete) {
+  if (allExhausted) {
     _ucPendingNewCat  = nextKey;
     _ucPendingPrevCat = catKey;
   }
