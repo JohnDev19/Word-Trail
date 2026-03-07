@@ -1822,7 +1822,7 @@ function renderGrid(animate = false) {
   freshGrid.addEventListener('touchmove',  onMove, { passive: false });
   freshGrid.addEventListener('mouseup',    onEnd);
   freshGrid.addEventListener('touchend',   onEnd);
-  document.addEventListener('mouseup',  onEnd);
+  document.removeEventListener('mouseup', onEnd); document.addEventListener('mouseup', onEnd);
 }
 
 // ─────────────────────────────────────────────
