@@ -177,7 +177,7 @@ function startCatAmbient(catKey) {
   if (_ambientAudio && _ambientPrimed && _ambientPrimedCat === catKey) {
     _ambientAudio.volume = 0;
     _ambientAudio.play().catch(() => {});
-    _fadeAmbientTo(0.28, 2400);
+    _fadeAmbientTo(0.55, 2400);
     _ambientPrimed = false;
   } else {
     if (_ambientAudio) { _ambientAudio.pause(); _ambientAudio = null; }
@@ -674,7 +674,7 @@ function startBgMusic() {
   if (bgMusic && _musicPrimed) {
     bgMusic.volume = 0;
     bgMusic.play().catch(() => {});
-    fadeMusicTo(0.45, 1400);
+    fadeMusicTo(0.70, 1400);
     _musicPrimed = false;
   } else {
     stopBgMusic();
@@ -689,7 +689,7 @@ function startBgMusic() {
 
 function continueBgMusic() {
   if (!S.settings.music) return;
-  if (bgMusic && !bgMusic.paused) { fadeMusicTo(0.45, 900); }
+  if (bgMusic && !bgMusic.paused) { fadeMusicTo(0.70, 900); }
   else startBgMusic();
 }
 
@@ -2508,6 +2508,7 @@ function buildGameState(catKey) {
 // ─────────────────────────────────────────────
 function showComplete() {
   fadeMusicTo(0.15, 1000);
+_fadeAmbientTo(0.08, 1000);
   playSound('complete');
   clearCurrentWordDisplay();
 
@@ -2617,8 +2618,8 @@ function showComplete() {
 // ─────────────────────────────────────────────
 // PAUSE
 // ─────────────────────────────────────────────
-function openPause()   { pauseBgMusicSoft(); openModal('pause-modal'); playSound('click'); }
-function closePause()  { resumeBgMusicSoft(); closeModal('pause-modal'); playSound('click'); }
+function openPause() { pauseBgMusicSoft(); _fadeAmbientTo(0.08, 400); openModal('pause-modal'); playSound('click'); }
+function closePause() { resumeBgMusicSoft(); _fadeAmbientTo(0.55, 600); closeModal('pause-modal'); playSound('click'); }
 function restartLevel() { closePause(); S.savedGame = null; save(); startGame(G.catKey); }
 function quitToMenu()  {
   closePause();
