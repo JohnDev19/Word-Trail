@@ -177,7 +177,7 @@ function startCatAmbient(catKey) {
   if (_ambientAudio && _ambientPrimed && _ambientPrimedCat === catKey) {
     _ambientAudio.volume = 0;
     _ambientAudio.play().catch(() => {});
-    _fadeAmbientTo(0.55, 2400);
+    _fadeAmbientTo(0.70, 2400);
     _ambientPrimed = false;
   } else {
     if (_ambientAudio) { _ambientAudio.pause(); _ambientAudio = null; }
@@ -674,7 +674,7 @@ function startBgMusic() {
   if (bgMusic && _musicPrimed) {
     bgMusic.volume = 0;
     bgMusic.play().catch(() => {});
-    fadeMusicTo(0.70, 1400);
+    fadeMusicTo(0.95, 1400);
     _musicPrimed = false;
   } else {
     stopBgMusic();
@@ -689,7 +689,7 @@ function startBgMusic() {
 
 function continueBgMusic() {
   if (!S.settings.music) return;
-  if (bgMusic && !bgMusic.paused) { fadeMusicTo(0.70, 900); }
+  if (bgMusic && !bgMusic.paused) { fadeMusicTo(0.95, 900); }
   else startBgMusic();
 }
 
@@ -714,7 +714,7 @@ function stopBgMusic() {
 }
 
 function pauseBgMusicSoft() { fadeMusicTo(0.08, 400); }
-function resumeBgMusicSoft() { fadeMusicTo(0.45, 600); }
+function resumeBgMusicSoft() { fadeMusicTo(0.95, 600); }
 
 let audioCtx = null, sfxGain = null;
 function getCtx() {
@@ -2032,33 +2032,6 @@ function ucOnCategoryComplete(catKey) {
   }
 }
 
-function ucCheckPendingUnlock(catKey) {
-  _ucPendingNewCat  = null;
-  _ucPendingPrevCat = null;
-
-  const idx     = CAT_ORDER.indexOf(catKey);
-  const nextKey = CAT_ORDER[idx + 1];
-  if (!nextKey) return;
-  if (S.unlockedCats.includes(nextKey)) return;
-
-  if (isCategoryFullyExhausted(catKey)) {
-    _ucPendingNewCat  = nextKey;
-    _ucPendingPrevCat = catKey;
-  }
-}
-
-function showCategoryUnlockCinematic(prevCat, newCat) {
-  const cat = CATEGORIES[newCat];
-  if (!cat) { startGame(newCat); return; }
-
-  toast({
-    title: `${cat.name} Unlocked!`,
-    desc:  `A new path has opened — ${cat.icon || ''}`,
-  });
-  playSound('unlock');
-  setTimeout(() => startGame(newCat), 1200);
-}
-
 function onWordFound(pw) {
   pw.found = true;
   const _allNowFound = G.words.every(w => w.found || w === pw);
@@ -2406,13 +2379,14 @@ function nextLevel() {
     if (!built) return;
     showScreen('game', 'right');
     requestAnimationFrame(() => {
-      setTimeout(() => {
-        renderGrid(false);
-        continueBgMusic();
-        startCatAmbient(catKey);
-        playSound('shuffle');
-      }, 60);
-    });
+  setTimeout(() => {
+    renderGrid(false);
+    continueBgMusic();
+    startCatAmbient(catKey);
+    _fadeAmbientTo(0.70, 900);
+    playSound('shuffle');
+  }, 60);
+});
   }
 }
 
@@ -2619,7 +2593,7 @@ _fadeAmbientTo(0.08, 1000);
 // PAUSE
 // ─────────────────────────────────────────────
 function openPause() { pauseBgMusicSoft(); _fadeAmbientTo(0.08, 400); openModal('pause-modal'); playSound('click'); }
-function closePause() { resumeBgMusicSoft(); _fadeAmbientTo(0.55, 600); closeModal('pause-modal'); playSound('click'); }
+function closePause() { resumeBgMusicSoft(); _fadeAmbientTo(0.70, 600); closeModal('pause-modal'); playSound('click'); }
 function restartLevel() { closePause(); S.savedGame = null; save(); startGame(G.catKey); }
 function quitToMenu()  {
   closePause();
