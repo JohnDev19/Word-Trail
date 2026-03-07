@@ -962,13 +962,39 @@ function _ucLaunchGame(catKey){
 
 function ucOnCategoryComplete(catKey){}
 
-var _ucShownUnlocks=[];
-function _ucAlreadyShown(key){return _ucShownUnlocks.includes(key);}
-function _ucMarkShown(key){if(!_ucShownUnlocks.includes(key)) _ucShownUnlocks.push(key);}
+function _ucAlreadyShown(key) {
+  return (typeof S !== 'undefined' && S.shownUnlocks && S.shownUnlocks.includes(key));
+}
+function _ucMarkShown(key) {
+  if (typeof S !== 'undefined') {
+    if (!S.shownUnlocks) S.shownUnlocks = [];
+    if (!S.shownUnlocks.includes(key)) {
+      S.shownUnlocks.push(key);
+      if (typeof save === 'function') save();
+    }
+  }
+}
 
-function ucCheckPendingUnlock(prevCatKey){
-  var ORDER=['animals','nature','cosmos','zen','ocean','seasons','mystical'];if(typeof S==='undefined'||!S.unlockedCats) return;
-  for(var i=1;i<ORDER.length;i++){var key=ORDER[i],prevKey=ORDER[i-1];if(S.unlockedCats.includes(key)&&prevKey===prevCatKey&&!_ucAlreadyShown(key)){_ucPendingNewCat=key;_ucPendingPrevCat=prevCatKey;_ucMarkShown(key);break;}}
+function ucCheckPendingUnlock(prevCatKey) {
+  var ORDER = ['animals','nature','cosmos','zen','ocean','seasons','mystical'];
+  if (typeof S === 'undefined' || !S.unlockedCats) return;
+  for (var i = 1; i < ORDER.length; i++) {
+    var key = ORDER[i];
+    var prevKey = ORDER[i - 1];
+    if (prevKey !== prevCatKey) continue;
+    if (!S.unlockedCats.includes(key)) continue;
+    if (_ucAlreadyShown(key)) continue;
+    if (typeof CATEGORIES === 'undefined') continue;
+    var prevCat = CATEGORIES[prevKey];
+    if (!prevCat) continue;
+    var used = S.usedWords[prevKey] || [];
+    var allFound = prevCat.words.every(function(w) { return used.includes(w.w); });
+    if (!allFound) continue;
+    _ucPendingNewCat = key;
+    _ucPendingPrevCat = prevCatKey;
+    _ucMarkShown(key);
+    break;
+  }
 }
 
 function showCategoryUnlockCinematic(prevCatKey,newCatKey){

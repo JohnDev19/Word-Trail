@@ -311,6 +311,7 @@ let S = {
   allPathsShownCinematic: false,
   gridSkin: 'default',
   ownedSkins: ['default'],
+  shownUnlocks: [],
 };
 
 // ─────────────────────────────────────────────
@@ -943,6 +944,7 @@ function load() {
       if (!('allPathsShownCinematic' in p))    p.allPathsShownCinematic   = false;
       if (!p.gridSkin)    p.gridSkin    = 'default';
       if (!p.ownedSkins)  p.ownedSkins  = ['default'];
+      if (!p.shownUnlocks) p.shownUnlocks = [];
       Object.assign(S, p);
     }
     const old = localStorage.getItem('wt_v5');
@@ -1520,6 +1522,7 @@ function checkAndUnlockCategories() {
     const key     = CAT_ORDER[i];
     const prevKey = CAT_ORDER[i - 1];
     if (S.unlockedCats.includes(key)) continue;
+    if (!S.unlockedCats.includes(prevKey)) continue;
     if (isCategoryFullyExhausted(prevKey)) {
       S.unlockedCats.push(key);
       if (!S.usedWords[key])  S.usedWords[key]  = [];
@@ -2013,33 +2016,8 @@ G.currentCells.forEach(({ r, c }) => {
 // UNLOCK CINEMATIC SYSTEM
 // ─────────────────────────────────────────────
 
-function ucOnCategoryComplete(catKey) {
-  _ucPendingNewCat  = null;
-  _ucPendingPrevCat = null;
-
-  const idx     = CAT_ORDER.indexOf(catKey);
-  const nextKey = CAT_ORDER[idx + 1];
-  if (!nextKey) return;
-  if (S.unlockedCats.includes(nextKey)) return;
-
-  const usedAfterSession = new Set([
-    ...(S.usedWords[catKey] || []),
-    ...G.words.map(w => w.w),
-  ]);
-  const allExhausted = CATEGORIES[catKey].words.every(w => usedAfterSession.has(w.w));
-
-  if (allExhausted) {
-    _ucPendingNewCat  = nextKey;
-    _ucPendingPrevCat = catKey;
-  }
-}
-
 function onWordFound(pw) {
   pw.found = true;
-  const _allNowFound = G.words.every(w => w.found || w === pw);
-  if (_allNowFound) {
-    ucOnCategoryComplete(G.catKey);
-  }
   G.foundWords.push(pw.w);
   pw.cells.forEach(({ r, c }) => { G.foundCells.push({ r, c }); });
   pw.cells.forEach(({ r, c }) => {
@@ -2369,11 +2347,11 @@ function startGame(catKey) {
 // ─────────────────────────────────────────────
 function nextLevel() {
   playSound('click');
-  if (_ucPendingNewCat) {
+  if (typeof _ucPendingNewCat !== 'undefined' && _ucPendingNewCat) {
     const prev = _ucPendingPrevCat;
     const next = _ucPendingNewCat;
-    _ucPendingNewCat  = null;
-    _ucPendingPrevCat = null;
+    if (typeof _ucPendingNewCat  !== 'undefined') _ucPendingNewCat  = null;
+if (typeof _ucPendingPrevCat !== 'undefined') _ucPendingPrevCat = null;
     showCategoryUnlockCinematic(prev, next);
   } else {
     const catKey = S.lastCat;
@@ -2528,7 +2506,7 @@ _fadeAmbientTo(0.08, 1000);
   }
 
   save();
-  ucCheckPendingUnlock(catKey);
+  if (typeof ucCheckPendingUnlock === 'function') ucCheckPendingUnlock(catKey);
 
   const banner = document.getElementById('title-unlock-banner');
   if (newTitle.level !== oldTitle.level) {
@@ -2556,7 +2534,7 @@ _fadeAmbientTo(0.08, 1000);
   }
 
   [1, 2, 3].forEach(i => {
-    const s = document.getElementById('star-' + i);
+  const s = document.getElementById('star-' + i);
     s.classList.remove('earned');
     if (i <= stars) {
       setTimeout(() => {

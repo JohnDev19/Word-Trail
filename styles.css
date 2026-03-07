@@ -524,7 +524,7 @@ html,body{width:100%;height:100%;overflow:hidden;background:var(--zen-bg);font-f
 }
 .chip-clue{font-size:12px;color:var(--zen-muted);font-weight:400;margin-left:2px;text-transform:none;letter-spacing:0;}
 
-.grid-wrap{flex:1;display:flex;align-items:center;justify-content:center;padding:2px 10px;overflow:hidden;position:relative;}
+.grid-wrap{flex:1;display:flex;align-items:center;justify-content:center;padding:2px 10px;overflow:hidden;position:relative; margin-top: 6px;}
 .word-grid{display:grid;touch-action:none;gap:2px;}
 
 .grid-cell{
@@ -585,6 +585,83 @@ html,body{width:100%;height:100%;overflow:hidden;background:var(--zen-bg);font-f
 
 .grid-shake {
   animation: gridShake 0.38s ease;
+}
+
+/* ─────────────────────────────────────────────
+   LIVE WORD DISPLAY
+   ───────────────────────────────────────────── */
+.current-word-bar {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  min-height: 36px;
+  padding: 4px 16px 2px;
+  flex-shrink: 0;
+  margin-top: 12px;
+  position: relative;
+  z-index: 5;
+}
+
+.current-word-letters {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 4px;
+  flex-wrap: nowrap;
+}
+
+.cwl-letter {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  min-width: 28px;
+  height: 30px;
+  padding: 0 5px;
+  border-radius: 7px;
+  background: rgba(106, 173, 204, 0.13);
+  border: 1.5px solid rgba(106, 173, 204, 0.40);
+  font-family: 'Nunito', sans-serif;
+  font-size: 15px;
+  font-weight: 800;
+  color: var(--zen-sky);
+  letter-spacing: 0.5px;
+  text-transform: uppercase;
+  animation: cwlPop 0.18s cubic-bezier(0.34, 1.56, 0.64, 1) both;
+}
+
+@keyframes cwlPop {
+  0%   { transform: scale(0.4) translateY(6px); opacity: 0; }
+  60%  { transform: scale(1.12) translateY(-2px); opacity: 1; }
+  100% { transform: scale(1) translateY(0); opacity: 1; }
+}
+
+.cwl-letter.correct {
+  background: rgba(95, 168, 130, 0.20);
+  border-color: var(--zen-jade);
+  color: var(--zen-jade);
+  animation: cwlCorrect 0.32s ease both;
+}
+
+@keyframes cwlCorrect {
+  0%   { transform: scale(1);    filter: brightness(1); }
+  40%  { transform: scale(1.18); filter: brightness(1.6); }
+  100% { transform: scale(1);    filter: brightness(1); }
+}
+
+.cwl-letter.wrong {
+  background: rgba(196, 111, 138, 0.18);
+  border-color: var(--zen-lotus);
+  color: var(--zen-lotus);
+  animation: cwlWrong 0.35s ease both;
+}
+
+@keyframes cwlWrong {
+  0%   { transform: translateX(0); }
+  20%  { transform: translateX(-5px); }
+  45%  { transform: translateX(5px); }
+  68%  { transform: translateX(-3px); }
+  85%  { transform: translateX(3px); }
+  100% { transform: translateX(0); }
 }
 
 /* ─────────────────────────────────────────────
@@ -1214,7 +1291,7 @@ html,body{width:100%;height:100%;overflow:hidden;background:var(--zen-bg);font-f
 }
 
 /* ─────────────────────────────────────────────
-   IN-GAME GRID SKINS — DIAMOND (fixed)
+   IN-GAME GRID SKINS — DIAMOND
 ───────────────────────────────────────────── */
 
 [data-skin="diamond"] .grid-cell {
@@ -1264,7 +1341,6 @@ html,body{width:100%;height:100%;overflow:hidden;background:var(--zen-bg);font-f
   animation: none;
 }
 
-/* Diamond skin preview cells (shop) */
 .skin-preview-cell.skin-diamond {
   border: none;
   border-radius: 0;
