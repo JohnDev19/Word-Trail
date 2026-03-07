@@ -24,7 +24,7 @@ const THEMES = {
     icon: '🌸',
     desc: 'Cherry blossom serenity',
     locked: true,
-    cost: 2000,
+    cost: 0,
     menuImages: [
       'assets/images/menu/zen-bg-sakura1.jpg',
       'assets/images/menu/zen-bg-sakura2.jpg',
@@ -37,7 +37,7 @@ const THEMES = {
     icon: '🌊',
     desc: 'Abyssal depths',
     locked: true,
-    cost: 3000,
+    cost: 0,
     menuImages: [
       'assets/images/menu/zen-bg-ocean1.jpg',
       'assets/images/menu/zen-bg-ocean2.jpg',
@@ -50,7 +50,7 @@ const THEMES = {
     icon: '🌌',
     desc: 'Infinite starfields',
     locked: true,
-    cost: 4000,
+    cost: 0,
     menuImages: [
       'assets/images/menu/zen-bg-cosmos1.jpg',
       'assets/images/menu/zen-bg-cosmos2.jpg',
@@ -1147,9 +1147,9 @@ function refreshStats() {
 // ─────────────────────────────────────────────
 const GRID_SKINS = [
   { key: 'default',  name: 'Classic',  price: 0,   desc: 'Square cells',   previewClass: 'skin-default'  },
-  { key: 'circle',   name: 'Circle',   price: 2000, desc: 'Rounded cells',  previewClass: 'skin-circle'   },
-  { key: 'diamond',  name: 'Diamond',  price: 3000, desc: 'No border',      previewClass: 'skin-diamond'  },
-  { key: 'hexagon',  name: 'Hexagon',  price: 4000, desc: 'Beehive grid',   previewClass: 'skin-hexagon'  },
+  { key: 'circle',   name: 'Circle',   price: 0, desc: 'Rounded cells',  previewClass: 'skin-circle'   },
+  { key: 'diamond',  name: 'Diamond',  price: 0, desc: 'No border',      previewClass: 'skin-diamond'  },
+  { key: 'hexagon',  name: 'Hexagon',  price: 0, desc: 'Beehive grid',   previewClass: 'skin-hexagon'  },
 ];
 
 const SKIN_PREVIEW_PATTERN = [
