@@ -96,10 +96,10 @@ For local development with audio, use a local server (like VS Code Live Server, 
 
 ---
 
-![Page 1](public/page1.jpg)
-![Page 2](public/page2.jpg)
-![Page 3](public/page3.jpg)
-![Page 4](public/page4.jpg)
-![Page 5](public/page5.jpg)
-![Page 6](public/page6.jpg)
-![Page 7](public/page7.jpg)
+![Page 1](post/page1.jpg)
+![Page 2](post/page2.jpg)
+![Page 3](post/page3.jpg)
+![Page 4](post/page4.jpg)
+![Page 5](post/page5.jpg)
+![Page 6](post/page6.jpg)
+![Page 7](post/page7.jpg)
