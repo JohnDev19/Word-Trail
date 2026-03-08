@@ -140,6 +140,52 @@ let _ambientFadeTimer  = null;
 let _ambientCurrentCat = null;
 let _ambientPrimed     = false;
 let _ambientPrimedCat  = null;
+let _ambientLoopTimer  = null;
+const AMBIENT_FADE_OUT_MS = 2800;
+const AMBIENT_FADE_IN_MS  = 2800;
+
+function _scheduleAmbientLoop(audioRef, targetVol) {
+  audioRef._loopTarget = targetVol;
+
+  function _onEnded() {
+    if (audioRef !== _ambientAudio) return;
+    audioRef.currentTime = 0;
+    audioRef._fadingOut  = false;
+    audioRef.play().catch(() => {});
+    _fadeAmbientTo(targetVol, AMBIENT_FADE_IN_MS);
+    _scheduleAmbientLoop(audioRef, targetVol);
+  }
+
+  function _onTimeUpdate() {
+    if (audioRef !== _ambientAudio) {
+      audioRef.removeEventListener('timeupdate', _onTimeUpdate);
+      audioRef.removeEventListener('ended', _onEnded);
+      return;
+    }
+    if (!audioRef.duration || isNaN(audioRef.duration)) return;
+    const timeLeft = audioRef.duration - audioRef.currentTime;
+    if (timeLeft <= AMBIENT_FADE_OUT_MS / 1000 + 0.1 && !audioRef._fadingOut) {
+      audioRef._fadingOut = true;
+      audioRef.removeEventListener('timeupdate', _onTimeUpdate);
+      audioRef.removeEventListener('ended', _onEnded);
+      _fadeAmbientTo(0, AMBIENT_FADE_OUT_MS, () => {
+        if (audioRef !== _ambientAudio) return;
+        audioRef.currentTime = 0;
+        audioRef._fadingOut  = false;
+        audioRef.play().catch(() => {});
+        _fadeAmbientTo(targetVol, AMBIENT_FADE_IN_MS);
+        _scheduleAmbientLoop(audioRef, targetVol);
+      });
+    }
+  }
+
+  audioRef.removeEventListener('timeupdate', audioRef._loopTimeUpdate);
+  audioRef.removeEventListener('ended', audioRef._loopEnded);
+  audioRef._loopTimeUpdate = _onTimeUpdate;
+  audioRef._loopEnded      = _onEnded;
+  audioRef.addEventListener('timeupdate', _onTimeUpdate);
+  audioRef.addEventListener('ended', _onEnded);
+}
 
 function primeAmbient(catKey) {
   if (!S.settings.sfx) return;
@@ -153,7 +199,7 @@ function primeAmbient(catKey) {
   _ambientPrimedCat = catKey;
 
   const a = new Audio(src);
-  a.loop   = true;
+  a.loop   = false;
   a.volume = 0;
   a.play().then(() => {
     a.pause();
@@ -175,23 +221,27 @@ function startCatAmbient(catKey) {
   _ambientCurrentCat = catKey;
 
   if (_ambientAudio && _ambientPrimed && _ambientPrimedCat === catKey) {
+    _ambientAudio.loop   = false;
     _ambientAudio.volume = 0;
     _ambientAudio.play().catch(() => {});
     _fadeAmbientTo(0.70, 2400);
     _ambientPrimed = false;
+    _scheduleAmbientLoop(_ambientAudio, 0.70);
   } else {
     if (_ambientAudio) { _ambientAudio.pause(); _ambientAudio = null; }
     const a = new Audio(src);
-    a.loop   = true;
+    a.loop   = false;
     a.volume = 0;
     _ambientAudio = a;
     a.play().catch(() => {});
-    _fadeAmbientTo(0.28, 2400);
+    _fadeAmbientTo(0.70, 2400);
+    _scheduleAmbientLoop(a, 0.70);
   }
 }
 
-function stopCatAmbient(fadeDurationMs = 1200) {
-  if (_ambientFadeTimer) { clearInterval(_ambientFadeTimer); _ambientFadeTimer = null; }
+function stopCatAmbient(fadeDurationMs = 2400) {
+  if (_ambientFadeTimer)  { clearInterval(_ambientFadeTimer);  _ambientFadeTimer  = null; }
+  if (_ambientLoopTimer)  { clearTimeout(_ambientLoopTimer);   _ambientLoopTimer  = null; }
   const dying        = _ambientAudio;
   _ambientAudio      = null;
   _ambientCurrentCat = null;
@@ -635,6 +685,8 @@ let G = {
   words: [],
   foundWords: [],
   foundCells: [],
+  bonusWords: [],
+  foundBonusWords: [],
   score: 0,
   selecting: false, startCell: null, currentCells: [],
   combo: 0, hintUsed: 0,
@@ -820,6 +872,18 @@ function playSound(id) {
       case 'buy':     [523,659,784,1046,1319].forEach((f,i)=>tone(f,'sine',0.25,now+i*0.08,0.3)); break;
       case 'levelup': [523,659,784,1046,1319,1568].forEach((f,i)=>tone(f,'sine',0.3,now+i*0.09,0.35)); break;
       case 'complete':[262,330,392,523,659,784,1046].forEach((f,i)=>tone(f,'sine',0.35,now+i*0.11,0.45)); if(S.settings.vibrate&&navigator.vibrate) navigator.vibrate([100,50,200,50,300]); break;
+      case 'already-found': {
+        const o = ctx.createOscillator(), g = ctx.createGain();
+        o.connect(g); g.connect(sfxGain);
+        o.type = 'sine';
+        o.frequency.setValueAtTime(1046, now);
+        o.frequency.exponentialRampToValueAtTime(1318, now + 0.12);
+        g.gain.setValueAtTime(0, now);
+        g.gain.linearRampToValueAtTime(0.10, now + 0.01);
+        g.gain.exponentialRampToValueAtTime(0.001, now + 0.28);
+        o.start(now); o.stop(now + 0.30);
+        break;
+      }
       case 'deny': {
         const od = ctx.createOscillator(), gd = ctx.createGain();
         od.connect(gd); gd.connect(sfxGain);
@@ -919,6 +983,23 @@ function playComboByIntensity(combo) {
       if (S.settings.vibrate && navigator.vibrate) navigator.vibrate([30, 20, 30]);
     }
 
+  } catch (e) {}
+}
+
+function playBonusWordSound(len) {
+  if (!S.settings.sfx) return;
+  try {
+    const ctx = getCtx(), now = ctx.currentTime;
+    const baseFreqs = [
+      523, 659, 784, 1046, 1319
+    ];
+    const count = Math.min(3 + Math.floor((len - 3) / 2), baseFreqs.length);
+    baseFreqs.slice(0, count).forEach((freq, i) => {
+      tone(freq, 'sine', 0.14 + i * 0.02, now + i * 0.07, 0.20);
+      tone(freq * 2, 'sine', 0.08, now + i * 0.07 + 0.04, 0.10);
+    });
+    tone(2093, 'sine', 0.06, now + count * 0.07, 0.08);
+    if (S.settings.vibrate && navigator.vibrate) navigator.vibrate([15, 10, 25]);
   } catch (e) {}
 }
 
@@ -1046,7 +1127,7 @@ function openModal(id)  { document.getElementById(id).classList.add('visible'); 
 function closeModal(id) { document.getElementById(id).classList.remove('visible'); }
 
 // ─────────────────────────────────────────────
-// PARTICLES — no-op
+// PARTICLES
 // ─────────────────────────────────────────────
 function makeParticles(id, n) {}
 
@@ -1727,6 +1808,58 @@ function buildGrid(words, gridSize, dirs) {
       }
     }
   }
+  
+  if (S.currentLevel >= 30 && placedWords.length >= 2) {
+    const DMAP_ALL = {
+      H:[0,1],V:[1,0],DR:[1,1],DL:[1,-1],
+      HR:[0,-1],VR:[-1,0],DRR:[-1,-1],DLR:[-1,1],
+    };
+    const allDirVecs = Object.values(DMAP_ALL);
+    const chainCount = S.currentLevel >= 75 ? 3 : S.currentLevel >= 50 ? 2 : 1;
+    let chainsFormed = 0;
+
+    for (let ci = 0; ci < placedWords.length - 1 && chainsFormed < chainCount; ci++) {
+      const anchor = placedWords[ci];
+      const anchorEnd = anchor.cells[anchor.cells.length - 1];
+      const word = placedWords[ci + 1];
+      if (word.cells.length === 0) continue;
+
+      const w = word.w;
+      let chained = false;
+
+      for (const [dr, dc] of allDirVecs) {
+        if (chained) break;
+        const cells = [];
+        let valid = true;
+        for (let i = 0; i < w.length; i++) {
+          const r = anchorEnd.r + i * dr;
+          const c = anchorEnd.c + i * dc;
+          if (r < 0 || r >= gridSize || c < 0 || c >= gridSize) { valid = false; break; }
+          const existing = grid[r][c];
+          if (i === 0) {
+            if (existing !== w[0]) { valid = false; break; }
+          } else {
+            if (existing !== '' && existing !== w[i]) { valid = false; break; }
+          }
+          cells.push({ r, c });
+        }
+        if (!valid || cells.length !== w.length) continue;
+
+        const alreadyPlaced = placedWords.find(pw =>
+          pw.cells.length === cells.length &&
+          pw.cells.every((cell, i) => cell.r === cells[i].r && cell.c === cells[i].c)
+        );
+        if (alreadyPlaced) continue;
+
+        for (let i = 1; i < w.length; i++) {
+          grid[cells[i].r][cells[i].c] = w[i];
+        }
+        word.cells = cells;
+        chained = true;
+        chainsFormed++;
+      }
+    }
+  }
 
   const alpha = 'ABCDEFGHIJKLMNOPQRSTUVWXYZ';
 for (let r = 0; r < gridSize; r++)
@@ -1918,8 +2051,8 @@ function onStart(e) {
 }
 
 function onMove(e) {
-  e.preventDefault();
   if (!G.selecting) return;
+  e.preventDefault();
   const pt = e.touches ? e.touches[0] : e;
   const cell = cellAt(pt.clientX, pt.clientY); if (!cell) return;
   const r = +cell.dataset.r, c = +cell.dataset.c;
@@ -1984,31 +2117,59 @@ function checkWord() {
   let foundWord = null;
 
   for (const pw of G.words) {
-    if (pw.found) continue;
     if (pw.w !== str) continue;
     const fwd = pw.cells.length === sel.length && pw.cells.every((cell, i) => cell.r === sel[i].r && cell.c === sel[i].c);
     if (fwd) { foundWord = pw; break; }
   }
 
   if (foundWord) {
+    if (foundWord.found) {
+      playSound('already-found');
+      clearSel();
+      clearCurrentWordDisplay();
+      G.currentCells = [];
+      return;
+    }
     flashCurrentWordResult(str.split(''), 'correct');
     onWordFound(foundWord);
-  } else {
-    playSound('wrong');
-
-const gridWrap = document.getElementById('grid-wrap');
-gridWrap.classList.remove('grcid-shake');
-void gridWrap.offsetWidth;
-gridWrap.classList.add('grid-shake');
-setTimeout(() => gridWrap.classList.remove('grid-shake'), 400);
-
-flashCurrentWordResult(str.split(''), 'wrong');
-G.currentCells.forEach(({ r, c }) => {
-      const el = document.querySelector(`.grid-cell[data-r="${r}"][data-c="${c}"]`);
-      if (el) { el.classList.remove('selected'); el.classList.add('wrong-flash'); setTimeout(() => el.classList.remove('wrong-flash'), 400); }
-    });
-    G.combo = 0; updateComboDisplay();
+    G.currentCells = [];
+    return;
   }
+
+  if (G.bonusWords && G.bonusWords.length) {
+    let matchedBonus = null;
+    for (const bw of G.bonusWords) {
+      if (bw.w !== str) continue;
+      const match = bw.cells.length === sel.length && bw.cells.every((cell, i) => cell.r === sel[i].r && cell.c === sel[i].c);
+      if (match) { matchedBonus = bw; break; }
+    }
+    if (matchedBonus) {
+      if (matchedBonus.found) {
+        playSound('already-found');
+        clearSel();
+        clearCurrentWordDisplay();
+        G.currentCells = [];
+        return;
+      }
+      onBonusWordFound(matchedBonus);
+      G.currentCells = [];
+      return;
+    }
+  }
+
+  playSound('wrong');
+  const gridWrap = document.getElementById('grid-wrap');
+  gridWrap.classList.remove('grid-shake');
+  void gridWrap.offsetWidth;
+  gridWrap.classList.add('grid-shake');
+  setTimeout(() => gridWrap.classList.remove('grid-shake'), 400);
+
+  flashCurrentWordResult(str.split(''), 'wrong');
+  G.currentCells.forEach(({ r, c }) => {
+    const el = document.querySelector(`.grid-cell[data-r="${r}"][data-c="${c}"]`);
+    if (el) { el.classList.remove('selected'); el.classList.add('wrong-flash'); setTimeout(() => el.classList.remove('wrong-flash'), 400); }
+  });
+  G.combo = 0; updateComboDisplay();
   G.currentCells = [];
 }
 
@@ -2038,13 +2199,12 @@ if (G.combo > 1) playComboByIntensity(G.combo);
   document.getElementById('game-score-display').textContent = G.score;
 
   if (S.savedGame) {
-    S.savedGame.foundWords = [...G.foundWords];
     S.savedGame.foundCells = G.foundCells.map(c => ({ ...c }));
-    S.savedGame.score  = G.score;
-    S.savedGame.combo  = G.combo;
-    S.savedGame.hintUsed = G.hintUsed;
-    const snap = S.savedGame.words.find(w => w.w === pw.w);
+    S.savedGame.score = G.score;
+    S.savedGame.combo = G.combo;
+    const snap = S.savedGame.words && S.savedGame.words.find(w => w.w === pw.w);
     if (snap) snap.found = true;
+    S.savedGame.foundWords = [...G.foundWords];
     save();
   }
 
@@ -2061,6 +2221,41 @@ if (G.combo > 1) playComboByIntensity(G.combo);
 
   refreshWordChips(); updateProgressBar(); updateComboDisplay();
   if (G.foundWords.length >= G.words.length) setTimeout(showComplete, 900);
+}
+
+function onBonusWordFound(bw) {
+  bw.found = true;
+  if (typeof ucUpdateBonusHint === 'function') ucUpdateBonusHint(G.bonusWords);
+  G.foundBonusWords.push(bw.w);
+  flashCurrentWordResult(bw.w.split(''), 'correct');
+
+  bw.cells.forEach(({ r, c }) => {
+    G.foundCells.push({ r, c });
+    const el = document.querySelector(`.grid-cell[data-r="${r}"][data-c="${c}"]`);
+    if (el) {
+      el.classList.remove('selected');
+      el.classList.add('bonus-cell');
+    }
+  });
+
+  const coins = typeof getBonusWordCoins === 'function' ? getBonusWordCoins(bw.w) : 10;
+  S.coins += coins;
+  S.score += coins * 2;
+  G.score += coins * 2;
+  document.getElementById('game-score-display').textContent = G.score;
+
+  playBonusWordSound(bw.w.length);
+
+  const wrap = document.getElementById('grid-wrap');
+  spawnElectricBonus(wrap, bw.w, coins, 0);
+
+  if (S.savedGame) {
+    S.savedGame.foundBonusWords = [...G.foundBonusWords];
+    S.savedGame.score = G.score;
+    const snap = S.savedGame.bonusWords && S.savedGame.bonusWords.find(w => w.w === bw.w);
+    if (snap) snap.found = true;
+    save();
+  }
 }
 
 function refreshWordChips() {
@@ -2272,7 +2467,7 @@ function showPregameLoader(catKey, onComplete) {
 // ─────────────────────────────────────────────
 function animateGameEntry() {
   const gameEl      = document.getElementById('screen-game');
-  const animTargets = gameEl.querySelectorAll('.game-nav, .cat-info-bar, .word-list-scroll, .hint-btn, .current-word-bar, .progress-bar-wrap');
+  const animTargets = gameEl.querySelectorAll('.game-nav, .cat-info-bar, .word-list-scroll, .hint-btn, .current-word-bar, .progress-bar-wrap, #bonus-hint-badge')
 
   animTargets.forEach(el => {
     el.style.opacity   = '0';
@@ -2335,10 +2530,13 @@ function startGame(catKey) {
 
   showPregameLoader(catKey, () => {
     initGameBgForCategory(catKey);
-    startBgMusic();
-    startCatAmbient(catKey);
-    animateGameEntry();
-    playSound('shuffle');
+startBgMusic();
+startCatAmbient(catKey);
+if (typeof ucShowBonusHint === 'function' && G.bonusWords && G.bonusWords.length) {
+  ucShowBonusHint(G.bonusWords);
+}
+animateGameEntry();
+playSound('shuffle');
   });
 }
 
@@ -2359,14 +2557,17 @@ if (typeof _ucPendingPrevCat !== 'undefined') _ucPendingPrevCat = null;
     if (!built) return;
     showScreen('game', 'right');
     requestAnimationFrame(() => {
-  setTimeout(() => {
-    renderGrid(false);
-    continueBgMusic();
-    startCatAmbient(catKey);
-    _fadeAmbientTo(0.70, 900);
-    playSound('shuffle');
-  }, 60);
-});
+    setTimeout(() => {
+      renderGrid(false);
+      continueBgMusic();
+      if (_ambientAudio && _ambientCurrentCat === catKey) {
+        _fadeAmbientTo(0.70, 900);
+      } else {
+        startCatAmbient(catKey);
+      }
+      playSound('shuffle');
+    }, 60);
+  });
   }
 }
 
@@ -2406,6 +2607,10 @@ function buildGameState(catKey) {
   const gridSize = computeGridSize(wordsToUse);
 
   const { grid, placedWords } = buildGrid(wordsToUse, gridSize, diffCfg.dirs);
+  
+  const bonusWords = typeof buildBonusWordList === 'function'
+    ? buildBonusWordList(grid, gridSize, placedWords, diffCfg.dirs)
+    : [];
 
   if (!S.catSession) S.catSession = {};
   S.catSession[catKey] = (S.catSession[catKey] || 0) + 1;
@@ -2413,6 +2618,8 @@ function buildGameState(catKey) {
   G = {
     grid, gridSize,
     words: placedWords, foundWords: [], foundCells: [],
+    bonusWords,
+    foundBonusWords: [],
     score: 0,
     selecting: false, startCell: null, currentCells: [],
     combo: 0, hintUsed: 0,
@@ -2420,11 +2627,13 @@ function buildGameState(catKey) {
   };
 
   S.currentGame = { level: S.currentLevel, catKey };
-  S.savedGame   = {
+  S.savedGame = {
     grid:      grid.map(row => [...row]),
     gridSize,
     words:     placedWords.map(pw => ({ ...pw, cells: pw.cells.map(c => ({ ...c })) })),
+    bonusWords: bonusWords.map(bw => ({ ...bw, cells: bw.cells.map(c => ({ ...c })) })),
     foundWords: [], foundCells: [],
+    foundBonusWords: [],
     score: 0, combo: 0, hintUsed: 0,
     catKey, catName: cat.name, level: S.currentLevel,
   };
@@ -2574,7 +2783,7 @@ _fadeAmbientTo(0.08, 1000);
 // ─────────────────────────────────────────────
 function openPause() { pauseBgMusicSoft(); _fadeAmbientTo(0.08, 400); openModal('pause-modal'); playSound('click'); }
 function closePause() { resumeBgMusicSoft(); _fadeAmbientTo(0.70, 600); closeModal('pause-modal'); playSound('click'); }
-function restartLevel() { closePause(); S.savedGame = null; save(); startGame(G.catKey); }
+function restartLevel() { closePause(); stopCatAmbient(300); S.savedGame = null; save(); startGame(G.catKey); }
 function quitToMenu()  {
   closePause();
   S.currentGame = null; save();
@@ -2589,17 +2798,19 @@ function quitToMenu()  {
 function resumeGame() {
   const snap = S.savedGame; if (!snap) return;
   G = {
-    grid:       snap.grid.map(row => [...row]),
-    gridSize:   snap.gridSize,
-    words:      snap.words.map(pw => ({ ...pw, cells: pw.cells.map(c => ({ ...c })) })),
-    foundWords: [...snap.foundWords],
-    foundCells: snap.foundCells.map(c => ({ ...c })),
-    score:      snap.score,
+    grid:            snap.grid.map(row => [...row]),
+    gridSize:        snap.gridSize,
+    words:           snap.words.map(pw => ({ ...pw, cells: pw.cells.map(c => ({ ...c })) })),
+    foundWords:      [...snap.foundWords],
+    foundCells:      snap.foundCells.map(c => ({ ...c })),
+    bonusWords:      (snap.bonusWords || []).map(bw => ({ ...bw, cells: bw.cells.map(c => ({ ...c })) })),
+    foundBonusWords: [...(snap.foundBonusWords || [])],
+    score:           snap.score,
     selecting: false, startCell: null, currentCells: [],
-    combo:      snap.combo    || 0,
-    hintUsed:   snap.hintUsed || 0,
-    catKey:     snap.catKey,
-    catName:    snap.catName,
+    combo:           snap.combo    || 0,
+    hintUsed:        snap.hintUsed || 0,
+    catKey:          snap.catKey,
+    catName:         snap.catName,
   };
   S.lastCat     = snap.catKey;
   S.currentGame = { level: snap.level, catKey: snap.catKey };
@@ -2631,7 +2842,22 @@ function resumeGame() {
     initGameBgForCategory(snap.catKey);
     startBgMusic();
     startCatAmbient(snap.catKey);
-    animateGameEntry();
+    if (typeof ucShowBonusHint === 'function' && G.bonusWords && G.bonusWords.length) {
+  ucShowBonusHint(G.bonusWords);
+}
+animateGameEntry();
+requestAnimationFrame(() => {
+  for (const bw of G.bonusWords) {
+        if (!bw.found) continue;
+        bw.cells.forEach(({ r, c }) => {
+          const el = document.querySelector(`.grid-cell[data-r="${r}"][data-c="${c}"]`);
+          if (el) el.classList.add('bonus-cell');
+        });
+      }
+      if (typeof ucShowBonusHint === 'function' && G.bonusWords && G.bonusWords.length) {
+        ucShowBonusHint(G.bonusWords);
+      }
+    });
     playSound('shuffle');
   });
 }

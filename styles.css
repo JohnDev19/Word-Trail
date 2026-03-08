@@ -1357,3 +1357,27 @@ html,body{width:100%;height:100%;overflow:hidden;background:var(--zen-bg);font-f
   background: rgba(255,255,255,0.22);
   border: none;
 }
+
+.grid-cell.bonus-cell {
+  background: linear-gradient(135deg,
+    rgba(201, 168, 76, 0.38) 0%,
+    rgba(255, 215, 80, 0.28) 50%,
+    rgba(201, 168, 76, 0.38) 100%
+  ) !important;
+  color: #fff8dc !important;
+  border-color: rgba(201, 168, 76, 0.65) !important;
+  box-shadow:
+    0 0 10px rgba(201, 168, 76, 0.45),
+    inset 0 0 6px rgba(255, 215, 80, 0.20) !important;
+  animation: bonusCellReveal 0.45s cubic-bezier(0.16, 1, 0.3, 1) both;
+}
+
+@keyframes bonusCellReveal {
+  0%   { transform: scale(0.75); opacity: 0.4; filter: brightness(2.5); }
+  55%  { transform: scale(1.18); filter: brightness(1.6); }
+  100% { transform: scale(1);    opacity: 1;  filter: brightness(1);   }
+}
+
+[data-skin="circle"]  .grid-cell.bonus-cell { border-radius: 50% !important; }
+[data-skin="diamond"] .grid-cell.bonus-cell { clip-path: polygon(50% 0%, 100% 50%, 50% 100%, 0% 50%) !important; }
+[data-skin="hexagon"] .grid-cell.bonus-cell { clip-path: polygon(25% 0%, 75% 0%, 100% 50%, 75% 100%, 25% 100%, 0% 50%) !important; }
