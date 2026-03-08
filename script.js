@@ -24,7 +24,7 @@ const THEMES = {
     icon: '🌸',
     desc: 'Cherry blossom serenity',
     locked: true,
-    cost: 2000,
+    cost: 500,
     menuImages: [
       'assets/images/menu/zen-bg-sakura1.jpg',
       'assets/images/menu/zen-bg-sakura2.jpg',
@@ -37,7 +37,7 @@ const THEMES = {
     icon: '🌊',
     desc: 'Abyssal depths',
     locked: true,
-    cost: 3000,
+    cost: 800,
     menuImages: [
       'assets/images/menu/zen-bg-ocean1.jpg',
       'assets/images/menu/zen-bg-ocean2.jpg',
@@ -50,7 +50,7 @@ const THEMES = {
     icon: '🌌',
     desc: 'Infinite starfields',
     locked: true,
-    cost: 4000,
+    cost: 1000,
     menuImages: [
       'assets/images/menu/zen-bg-cosmos1.jpg',
       'assets/images/menu/zen-bg-cosmos2.jpg',
@@ -224,9 +224,9 @@ function startCatAmbient(catKey) {
     _ambientAudio.loop   = false;
     _ambientAudio.volume = 0;
     _ambientAudio.play().catch(() => {});
-    _fadeAmbientTo(0.70, 2400);
+    _fadeAmbientTo(1.0, 2400);
     _ambientPrimed = false;
-    _scheduleAmbientLoop(_ambientAudio, 0.70);
+    _scheduleAmbientLoop(_ambientAudio, 1.0);
   } else {
     if (_ambientAudio) { _ambientAudio.pause(); _ambientAudio = null; }
     const a = new Audio(src);
@@ -234,8 +234,8 @@ function startCatAmbient(catKey) {
     a.volume = 0;
     _ambientAudio = a;
     a.play().catch(() => {});
-    _fadeAmbientTo(0.70, 2400);
-    _scheduleAmbientLoop(a, 0.70);
+    _fadeAmbientTo(1.0, 2400);
+    _scheduleAmbientLoop(a, 1.0);
   }
 }
 
@@ -529,7 +529,7 @@ function refreshMenuBgForTheme() {
 // GAME BACKGROUND SYSTEM 
 // ─────────────────────────────────────────────
 
-const GAME_BG_OVERLAY_OPACITY = 0.62;
+const GAME_BG_OVERLAY_OPACITY = 0.52;
 const GAME_FADE_MS   = 2400;
 const GAME_FADE_EASE = 'cubic-bezier(0.45, 0, 0.25, 1)';
 const BG_ROTATE_INTERVAL = 2 * 60 * 1000; // 2 mins lang
@@ -571,9 +571,9 @@ function _buildGameBgLayers() {
     pointer-events:none;
     background:
       linear-gradient(to bottom,
-        rgba(0,0,0,0.72) 0%,
-        rgba(0,0,0,0.45) 30%,
-        rgba(0,0,0,0.10) 55%,
+        rgba(0,0,0,0.55) 0%,
+        rgba(0,0,0,0.30) 30%,
+        rgba(0,0,0,0.08) 55%,
         rgba(0,0,0,0.00) 70%
       ),
       rgba(0,0,0,${GAME_BG_OVERLAY_OPACITY});
@@ -727,7 +727,7 @@ function startBgMusic() {
   if (bgMusic && _musicPrimed) {
     bgMusic.volume = 0;
     bgMusic.play().catch(() => {});
-    fadeMusicTo(0.95, 1400);
+    fadeMusicTo(1.0, 1400);
     _musicPrimed = false;
   } else {
     stopBgMusic();
@@ -736,13 +736,13 @@ function startBgMusic() {
     bgMusic.loop   = true;
     bgMusic.volume = 0;
     bgMusic.play().catch(() => {});
-    fadeMusicTo(0.45, 1400);
+    fadeMusicTo(1.0, 1400);
   }
 }
 
 function continueBgMusic() {
   if (!S.settings.music) return;
-  if (bgMusic && !bgMusic.paused) { fadeMusicTo(0.95, 900); }
+  if (bgMusic && !bgMusic.paused) { fadeMusicTo(1.0, 900); }
   else startBgMusic();
 }
 
@@ -767,7 +767,7 @@ function stopBgMusic() {
 }
 
 function pauseBgMusicSoft() { fadeMusicTo(0.08, 400); }
-function resumeBgMusicSoft() { fadeMusicTo(0.95, 600); }
+function resumeBgMusicSoft() { fadeMusicTo(1.0, 600); }
 
 let audioCtx = null, sfxGain = null;
 function getCtx() {
@@ -1230,9 +1230,9 @@ function refreshStats() {
 // ─────────────────────────────────────────────
 const GRID_SKINS = [
   { key: 'default',  name: 'Classic',  price: 0,   desc: 'Square cells',   previewClass: 'skin-default'  },
-  { key: 'circle',   name: 'Circle',   price: 2000, desc: 'Rounded cells',  previewClass: 'skin-circle'   },
-  { key: 'diamond',  name: 'Diamond',  price: 3000, desc: 'No border',      previewClass: 'skin-diamond'  },
-  { key: 'hexagon',  name: 'Hexagon',  price: 4000, desc: 'Beehive grid',   previewClass: 'skin-hexagon'  },
+  { key: 'circle',   name: 'Circle',   price: 500, desc: 'Rounded cells',  previewClass: 'skin-circle'   },
+  { key: 'diamond',  name: 'Diamond',  price: 900, desc: 'No border',      previewClass: 'skin-diamond'  },
+  { key: 'hexagon',  name: 'Hexagon',  price: 1000, desc: 'Beehive grid',   previewClass: 'skin-hexagon'  },
 ];
 
 const SKIN_PREVIEW_PATTERN = [
@@ -2560,11 +2560,8 @@ if (typeof _ucPendingPrevCat !== 'undefined') _ucPendingPrevCat = null;
     setTimeout(() => {
       renderGrid(false);
       continueBgMusic();
-      if (_ambientAudio && _ambientCurrentCat === catKey) {
-        _fadeAmbientTo(0.70, 900);
-      } else {
-        startCatAmbient(catKey);
-      }
+      _ambientCurrentCat = null;
+      startCatAmbient(catKey);
       playSound('shuffle');
     }, 60);
   });
@@ -2782,7 +2779,7 @@ _fadeAmbientTo(0.08, 1000);
 // PAUSE
 // ─────────────────────────────────────────────
 function openPause() { pauseBgMusicSoft(); _fadeAmbientTo(0.08, 400); openModal('pause-modal'); playSound('click'); }
-function closePause() { resumeBgMusicSoft(); _fadeAmbientTo(0.70, 600); closeModal('pause-modal'); playSound('click'); }
+function closePause() { resumeBgMusicSoft(); _fadeAmbientTo(1.0, 600); closeModal('pause-modal'); playSound('click'); }
 function restartLevel() { closePause(); stopCatAmbient(300); S.savedGame = null; save(); startGame(G.catKey); }
 function quitToMenu()  {
   closePause();

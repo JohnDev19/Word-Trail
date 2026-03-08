@@ -30,8 +30,63 @@ const BONUS_WORD_POOL = [
 
 const BONUS_MIN_LENGTH = 2;
 const BONUS_MAX_LENGTH = 3;
-const BONUS_SEED_COUNT = 1;
+const BONUS_SEED_COUNT = 3;
 
+function _ensureBonusStyles() {
+  if (document.getElementById('bonus-hint-styles')) return;
+  const style = document.createElement('style');
+  style.id = 'bonus-hint-styles';
+  style.textContent = `
+    #bonus-hint-badge {
+      display: inline-flex;
+      align-items: center;
+      gap: 5px;
+      font-size: 0.72rem;
+      font-family: inherit;
+      color: var(--zen-gold);
+      background: rgba(201, 168, 76, 0.12);
+      border: 1px solid rgba(201, 168, 76, 0.45);
+      border-radius: 20px;
+      padding: 3px 10px 3px 8px;
+      letter-spacing: 0.04em;
+      pointer-events: none;
+      white-space: nowrap;
+      z-index: 10;
+    }
+    .bonus-hint-gem {
+      font-size: 0.6rem;
+      animation: bonusGemPulse 2.4s ease-in-out infinite;
+    }
+    @keyframes bonusGemPulse {
+      0%, 100% { opacity: 0.5; }
+      50%       { opacity: 1;   }
+    }
+    .grid-cell.bonus-cell {
+      background: linear-gradient(135deg,
+        rgba(201,168,76,0.38) 0%,
+        rgba(255,215,80,0.28) 50%,
+        rgba(201,168,76,0.38) 100%
+      ) !important;
+      color: #fff8dc !important;
+      border-color: rgba(201,168,76,0.65) !important;
+      box-shadow: 0 0 10px rgba(201,168,76,0.45), inset 0 0 6px rgba(255,215,80,0.2) !important;
+      animation: bonusCellReveal 0.45s cubic-bezier(0.16,1,0.3,1) both;
+    }
+    @keyframes bonusCellReveal {
+      0%   { transform: scale(0.75); opacity: 0.4; filter: brightness(2.5); }
+      55%  { transform: scale(1.18); filter: brightness(1.6); }
+      100% { transform: scale(1);    opacity: 1;  filter: brightness(1); }
+    }
+    [data-skin="circle"]  .grid-cell.bonus-cell { border-radius: 50% !important; }
+    [data-skin="diamond"] .grid-cell.bonus-cell { clip-path: polygon(50% 0%,100% 50%,50% 100%,0% 50%) !important; }
+    [data-skin="hexagon"] .grid-cell.bonus-cell { clip-path: polygon(25% 0%,75% 0%,100% 50%,75% 100%,25% 100%,0% 50%) !important; }
+  `;
+  document.head.appendChild(style);
+}
+
+// ─────────────────────────────────────────────
+// BUILD LOOKUP
+// ─────────────────────────────────────────────
 function buildBonusLookup() {
   const set = new Set();
   BONUS_WORD_POOL.forEach(w => {
@@ -40,6 +95,9 @@ function buildBonusLookup() {
   return set;
 }
 
+// ─────────────────────────────────────────────
+// SEED BONUS WORDS SA GRID
+// ─────────────────────────────────────────────
 function seedBonusWords(grid, gridSize, placedWords, dirs) {
   const DMAP = {
     H:   [0,  1], V:   [1,  0], DR:  [1,  1], DL:  [1, -1],
@@ -61,6 +119,7 @@ function seedBonusWords(grid, gridSize, placedWords, dirs) {
   }
 
   const seeded = [];
+  const seededCellSet = new Set();
   let count = 0;
   const usedDirKeys = (dirs && dirs.length) ? dirs : allDirKeys;
 
@@ -81,12 +140,20 @@ function seedBonusWords(grid, gridSize, placedWords, dirs) {
         const r = sr + i * dr;
         const c = sc + i * dc;
         if (r < 0 || r >= gridSize || c < 0 || c >= gridSize) { valid = false; break; }
-        if (mainCellSet.has(`${r},${c}`)) { valid = false; break; }
+        if (mainCellSet.has(`${r},${c}`) && grid[r][c] !== w[i]) { valid = false; break; }
         cells.push({ r, c });
       }
       if (!valid || cells.length !== w.length) continue;
 
-      cells.forEach((cell, i) => { grid[cell.r][cell.c] = w[i]; });
+      const collidesWithSeeded = cells.some(cell =>
+        seededCellSet.has(`${cell.r},${cell.c}`) && grid[cell.r][cell.c] !== w[cells.indexOf(cell)]
+      );
+      if (collidesWithSeeded) continue;
+
+      cells.forEach((cell, i) => {
+        grid[cell.r][cell.c] = w[i];
+        seededCellSet.add(`${cell.r},${cell.c}`);
+      });
       seeded.push({ w, cells, isBonus: true, found: false, intentional: true });
       placed = true;
       count++;
@@ -96,6 +163,9 @@ function seedBonusWords(grid, gridSize, placedWords, dirs) {
   return seeded;
 }
 
+// ─────────────────────────────────────────────
+// SCAN GRID PARA SA ACCIDENTAL BONUS WORDS
+// ─────────────────────────────────────────────
 function scanGridForBonusWords(grid, gridSize, placedWords) {
   const lookup = buildBonusLookup();
   const placedStrings = new Set(placedWords.map(pw => pw.w.toUpperCase()));
@@ -106,7 +176,7 @@ function scanGridForBonusWords(grid, gridSize, placedWords) {
   ];
 
   const foundKeys = new Set();
-  const results = [];
+  const results   = [];
 
   for (let r = 0; r < gridSize; r++) {
     for (let c = 0; c < gridSize; c++) {
@@ -137,15 +207,16 @@ function scanGridForBonusWords(grid, gridSize, placedWords) {
   return results;
 }
 
+// ─────────────────────────────────────────────
+// BUILD FINAL BONUS WORD LIST
+// ─────────────────────────────────────────────
 function buildBonusWordList(grid, gridSize, placedWords, dirs) {
-  const seeded = seedBonusWords(grid, gridSize, placedWords, dirs);
+  const seeded  = seedBonusWords(grid, gridSize, placedWords, dirs);
   const scanned = scanGridForBonusWords(grid, gridSize, placedWords);
 
   const seededKeys = new Set(seeded.map(sw => sw.cells.map(c => `${c.r},${c.c}`).join('|')));
-  const seededWords = new Set(seeded.map(sw => sw.w));
-
-  const merged = [...seeded];
-  const usedWords = new Set(seededWords);
+  const usedWords  = new Set(seeded.map(sw => sw.w));
+  const merged     = [...seeded];
 
   for (const sw of scanned) {
     const key = sw.cells.map(c => `${c.r},${c.c}`).join('|');
@@ -155,9 +226,12 @@ function buildBonusWordList(grid, gridSize, placedWords, dirs) {
     }
   }
 
-  return merged.slice(0, 1);
+  return merged.slice(0, 3);
 }
 
+// ─────────────────────────────────────────────
+// COINS PER BONUS WORD
+// ─────────────────────────────────────────────
 function getBonusWordCoins(word) {
   return word.length <= 2 ? 5 : 10;
 }
@@ -169,89 +243,47 @@ function ucShowBonusHint(bonusWords) {
   const total = bonusWords.filter(bw => !bw.found).length;
   if (total === 0) return;
 
+  _ensureBonusStyles();
+
   const badge = document.createElement('div');
   badge.id = 'bonus-hint-badge';
-  badge.innerHTML = `<span class="bonus-hint-gem">✦</span> ${total} hidden word${total !== 1 ? 's' : ''}`;
-
-  if (!document.getElementById('bonus-hint-styles')) {
-    const style = document.createElement('style');
-    style.id = 'bonus-hint-styles';
-    style.textContent = `
-      #bonus-hint-badge {
-        display: inline-flex;
-        align-items: center;
-        gap: 5px;
-        font-size: 0.72rem;
-        font-family: inherit;
-        color: rgba(201, 168, 76, 0.75);
-        background: rgba(201, 168, 76, 0.08);
-        border: 1px solid rgba(201, 168, 76, 0.22);
-        border-radius: 20px;
-        padding: 3px 10px 3px 8px;
-        letter-spacing: 0.04em;
-        pointer-events: none;
-        white-space: nowrap;
-        z-index: 10;
-      }
-      .bonus-hint-gem {
-        font-size: 0.6rem;
-        animation: bonusGemPulse 2.4s ease-in-out infinite;
-      }
-      @keyframes bonusGemPulse {
-        0%, 100% { opacity: 0.5; }
-        50%       { opacity: 1;   }
-      }
-      .grid-cell.bonus-cell {
-        background: linear-gradient(135deg,
-          rgba(201,168,76,0.38) 0%,
-          rgba(255,215,80,0.28) 50%,
-          rgba(201,168,76,0.38) 100%
-        ) !important;
-        color: #fff8dc !important;
-        border-color: rgba(201,168,76,0.65) !important;
-        box-shadow: 0 0 10px rgba(201,168,76,0.45), inset 0 0 6px rgba(255,215,80,0.2) !important;
-        animation: bonusCellReveal 0.45s cubic-bezier(0.16,1,0.3,1) both;
-      }
-      @keyframes bonusCellReveal {
-        0%   { transform: scale(0.75); opacity: 0.4; filter: brightness(2.5); }
-        55%  { transform: scale(1.18); filter: brightness(1.6); }
-        100% { transform: scale(1);    opacity: 1;  filter: brightness(1); }
-      }
-      [data-skin="circle"]  .grid-cell.bonus-cell { border-radius: 50% !important; }
-      [data-skin="diamond"] .grid-cell.bonus-cell { clip-path: polygon(50% 0%,100% 50%,50% 100%,0% 50%) !important; }
-      [data-skin="hexagon"] .grid-cell.bonus-cell { clip-path: polygon(25% 0%,75% 0%,100% 50%,75% 100%,25% 100%,0% 50%) !important; }
-    `;
-    document.head.appendChild(style);
-  }
+  badge.innerHTML = `<span class="bonus-hint-gem">✦</span><span id="bonus-hint-text">${total} hidden word${total !== 1 ? 's' : ''}</span>`;
 
   const hintBtn = document.querySelector('.hint-btn');
   if (hintBtn && hintBtn.parentNode) {
-    hintBtn.parentNode.style.display     = 'flex';
-    hintBtn.parentNode.style.alignItems  = 'center';
-    hintBtn.parentNode.style.gap         = '8px';
-    hintBtn.parentNode.appendChild(badge);
-  } else {
-    const gridWrap = document.getElementById('grid-wrap');
-    if (gridWrap) {
-      gridWrap.style.position = 'relative';
-      gridWrap.appendChild(badge);
-    }
+    const row = hintBtn.parentNode;
+    row.style.display        = 'flex';
+    row.style.alignItems     = 'center';
+    row.style.justifyContent = 'space-between';
+    badge.style.marginRight  = 'auto';
+    row.insertBefore(badge, hintBtn);
   }
 }
 
+// ─────────────────────────────────────────────
+// BONUS HINT BADGE
+// ─────────────────────────────────────────────
 function ucUpdateBonusHint(bonusWords) {
-  const badge = document.createElement('div'); badge.id = 'bonus-hint-badge'; badge.className = 'bonus-hint-badge';
-  const remaining = bonusWords.filter(bw => !bw.found).length;
+  const badge = document.getElementById('bonus-hint-badge');
   if (!badge) return;
+
+  const remaining = bonusWords.filter(bw => !bw.found).length;
+
   if (remaining === 0) {
-    badge.style.transition = 'opacity 0.5s';
-    badge.style.opacity = '0';
-    setTimeout(() => badge.remove(), 500);
+    badge.style.transition = 'opacity 0.45s ease, transform 0.45s ease';
+    badge.style.opacity    = '0';
+    badge.style.transform  = 'translateY(-6px)';
+    setTimeout(() => { if (badge.parentNode) badge.remove(); }, 470);
     return;
   }
-  badge.innerHTML = `<span class="bonus-hint-gem">✦</span> ${remaining} hidden word${remaining !== 1 ? 's' : ''}`;
+
+  const txt = document.getElementById('bonus-hint-text');
+  if (txt) txt.textContent = `${remaining} hidden word${remaining !== 1 ? 's' : ''}`;
 }
 
+// ─────────────────────────────────────────────
+// EXPORTS
+// ─────────────────────────────────────────────
 window.buildBonusWordList = buildBonusWordList;
 window.getBonusWordCoins  = getBonusWordCoins;
 window.ucShowBonusHint    = ucShowBonusHint;
