@@ -1592,9 +1592,12 @@ function doReset() {
 // CATEGORY UNLOCK LOGIC
 // ─────────────────────────────────────────────
 function isCategoryFullyExhausted(catKey) {
-  const cat   = CATEGORIES[catKey];
-  const found = S.usedWords[catKey] || [];
-  return cat.words.every(w => found.includes(w.w));
+  const cat = CATEGORIES[catKey];
+  if (!cat) return false;
+  const used = S.usedWords[catKey] || [];
+  const mainWords = cat.words.filter(w => !w.isBonus);
+  if (mainWords.length === 0) return false;
+  return mainWords.every(w => used.includes(w.w));
 }
 
 function checkAndUnlockCategories() {
@@ -2677,7 +2680,7 @@ _fadeAmbientTo(0.08, 1000);
 
   if (!S.usedWords[catKey]) S.usedWords[catKey] = [];
   for (const pw of G.words) {
-    if (pw.found && !S.usedWords[catKey].includes(pw.w)) {
+    if (pw.found && !pw.isBonus && !S.usedWords[catKey].includes(pw.w)) {
       S.usedWords[catKey].push(pw.w);
     }
   }

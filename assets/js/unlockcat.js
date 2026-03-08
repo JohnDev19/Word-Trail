@@ -988,7 +988,7 @@ function ucCheckPendingUnlock(prevCatKey) {
     var prevCat = CATEGORIES[prevKey];
     if (!prevCat) continue;
     var used = S.usedWords[prevKey] || [];
-    var allFound = prevCat.words.every(function(w) { return used.includes(w.w); });
+    var allFound = prevCat.words.filter(function(w){ return !w.isBonus; }).every(function(w) { return used.includes(w.w); });
     if (!allFound) continue;
     _ucPendingNewCat = key;
     _ucPendingPrevCat = prevCatKey;
