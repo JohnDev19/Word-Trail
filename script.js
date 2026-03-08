@@ -68,9 +68,9 @@ const THEME_ORDER = ['default', 'sakura', 'ocean', 'cosmos'];
 const CAT_BG_IMAGES = {
   animals:  ['assets/images/animals/bg1.jpg','assets/images/animals/bg2.jpg','assets/images/animals/bg3.jpg','assets/images/animals/bg4.jpg','assets/images/animals/bg5.jpg', 'assets/images/animals/bg6.jpg','assets/images/animals/bg7.jpg','assets/images/animals/bg8.jpg','assets/images/animals/bg9.jpg','assets/images/animals/bg10.jpg'],
   nature:   ['assets/images/nature/bg1.jpg','assets/images/nature/bg2.jpg','assets/images/nature/bg3.jpg','assets/images/nature/bg4.jpg','assets/images/nature/bg5.jpg', 'assets/images/nature/bg6.jpg','assets/images/nature/bg7.jpg','assets/images/nature/bg8.jpg','assets/images/nature/bg9.jpg','assets/images/nature/bg10.jpg'],
-  cosmos:   ['assets/images/cosmos/bg1.jpg','assets/images/cosmos/bg2.jpg','assets/images/cosmos/bg3.jpg','assets/images/cosmos/bg4.jpg','assets/images/cosmos/bg5.jpg'],
-  zen:      ['assets/images/zen/bg1.jpg','assets/images/zen/bg2.jpg','assets/images/zen/bg3.jpg','assets/images/zen/bg4.jpg','assets/images/zen/bg5.jpg'],
-  ocean:    ['assets/images/ocean/bg1.jpg','assets/images/ocean/bg2.jpg','assets/images/ocean/bg3.jpg','assets/images/ocean/bg4.jpg','assets/images/ocean/bg5.jpg'],
+  cosmos:   ['assets/images/cosmos/bg1.jpg','assets/images/cosmos/bg2.jpg','assets/images/cosmos/bg3.jpg','assets/images/cosmos/bg4.jpg','assets/images/cosmos/bg5.jpg', 'assets/images/cosmos/bg6.jpg','assets/images/cosmos/bg7.jpg','assets/images/cosmos/bg8.jpg','assets/images/cosmos/bg9.jpg','assets/images/cosmos/bg10.jpg'],
+  zen:      ['assets/images/zen/bg1.jpg','assets/images/zen/bg2.jpg','assets/images/zen/bg3.jpg','assets/images/zen/bg4.jpg','assets/images/zen/bg5.jpg', 'assets/images/zen/bg6.jpg','assets/images/zen/bg7.jpg','assets/images/zen/bg8.jpg','assets/images/zen/bg9.jpg','assets/images/zen/bg10.jpg'],
+  ocean:    ['assets/images/ocean/bg1.jpg','assets/images/ocean/bg2.jpg','assets/images/ocean/bg3.jpg','assets/images/ocean/bg4.jpg','assets/images/ocean/bg5.jpg', 'assets/images/ocean/bg6.jpg','assets/images/ocean/bg7.jpg','assets/images/ocean/bg8.jpg','assets/images/ocean/bg9.jpg','assets/images/ocean/bg10.jpg'],
   seasons:  ['assets/images/seasons/bg1.jpg','assets/images/seasons/bg2.jpg','assets/images/seasons/bg3.jpg','assets/images/seasons/bg4.jpg','assets/images/seasons/bg5.jpg'],
   mystical: ['assets/images/mystical/bg1.jpg','assets/images/mystical/bg2.jpg','assets/images/mystical/bg3.jpg','assets/images/mystical/bg4.jpg','assets/images/mystical/bg5.jpg'],
 };
