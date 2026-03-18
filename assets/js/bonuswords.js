@@ -208,9 +208,27 @@ function scanGridForBonusWords(grid, gridSize, placedWords) {
 }
 
 // ─────────────────────────────────────────────
+// BONUS WORD APPEARANCE CHANCE (rare 25% lang)
+// ─────────────────────────────────────────────
+const BONUS_APPEARANCE_CHANCE = 0.25;
+
+// ─────────────────────────────────────────────
 // BUILD FINAL BONUS WORD LIST
 // ─────────────────────────────────────────────
 function buildBonusWordList(grid, gridSize, placedWords, dirs) {
+  if (Math.random() > BONUS_APPEARANCE_CHANCE) return [];
+
+  if (!window._bonusUsedWords) window._bonusUsedWords = new Set();
+  if (!window._bonusFoundWords) window._bonusFoundWords = new Set();
+
+  const eligible = BONUS_WORD_POOL.filter(w =>
+    w.length >= BONUS_MIN_LENGTH && w.length <= BONUS_MAX_LENGTH
+  );
+  const notYetUsed = eligible.filter(w => !window._bonusUsedWords.has(w));
+  if (notYetUsed.length === 0) {
+    window._bonusUsedWords.clear();
+  }
+
   const seeded  = seedBonusWords(grid, gridSize, placedWords, dirs);
   const scanned = scanGridForBonusWords(grid, gridSize, placedWords);
 
@@ -226,7 +244,12 @@ function buildBonusWordList(grid, gridSize, placedWords, dirs) {
     }
   }
 
-  return merged.slice(0, 3);
+  const filtered = merged.filter(bw => !window._bonusUsedWords.has(bw.w));
+  const result = filtered.slice(0, 3);
+
+  result.forEach(bw => window._bonusUsedWords.add(bw.w));
+
+  return result;
 }
 
 // ─────────────────────────────────────────────
@@ -284,8 +307,10 @@ function ucUpdateBonusHint(bonusWords) {
 // ─────────────────────────────────────────────
 // EXPORTS
 // ─────────────────────────────────────────────
-window.buildBonusWordList = buildBonusWordList;
-window.getBonusWordCoins  = getBonusWordCoins;
-window.ucShowBonusHint    = ucShowBonusHint;
-window.ucUpdateBonusHint  = ucUpdateBonusHint;
-window.BONUS_WORD_POOL    = BONUS_WORD_POOL;
+window.buildBonusWordList  = buildBonusWordList;
+window.getBonusWordCoins   = getBonusWordCoins;
+window.ucShowBonusHint     = ucShowBonusHint;
+window.ucUpdateBonusHint   = ucUpdateBonusHint;
+window.BONUS_WORD_POOL     = BONUS_WORD_POOL;
+window._bonusUsedWords     = window._bonusUsedWords  || new Set();
+window._bonusFoundWords    = window._bonusFoundWords || new Set();

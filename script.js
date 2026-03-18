@@ -2230,6 +2230,14 @@ function onBonusWordFound(bw) {
   bw.found = true;
   if (typeof ucUpdateBonusHint === 'function') ucUpdateBonusHint(G.bonusWords);
   G.foundBonusWords.push(bw.w);
+
+  if (window._bonusFoundWords) window._bonusFoundWords.add(bw.w);
+  if (window._bonusUsedWords && window._bonusFoundWords &&
+      [...window._bonusUsedWords].every(w => window._bonusFoundWords.has(w))) {
+    window._bonusUsedWords.clear();
+    window._bonusFoundWords.clear();
+  }
+
   flashCurrentWordResult(bw.w.split(''), 'correct');
 
   bw.cells.forEach(({ r, c }) => {
