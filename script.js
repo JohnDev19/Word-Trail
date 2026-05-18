@@ -352,6 +352,7 @@ let S = {
   currentGame: null,
   savedGame: null,
   activityLog: [],
+  bonusUsedWords: [],
   lastCat: 'animals',
   unlockedCats: ['animals'],
   usedWords: { animals: [] },
@@ -1021,6 +1022,7 @@ function load() {
       if (!p.unlockedThemes)  p.unlockedThemes  = ['default'];
       if (!p.catCycles)       p.catCycles       = {};
       if (!('savedGame' in p)) p.savedGame      = null;
+      if (!Array.isArray(p.bonusUsedWords))    p.bonusUsedWords           = [];
       if (!('allPathsComplete' in p))          p.allPathsComplete         = false;
       if (!('allPathsShownCinematic' in p))    p.allPathsShownCinematic   = false;
       if (!p.gridSkin)    p.gridSkin    = 'default';
@@ -2141,10 +2143,16 @@ function checkWord() {
 
   if (G.bonusWords && G.bonusWords.length) {
     let matchedBonus = null;
+    const strRev = str.split('').reverse().join('');
     for (const bw of G.bonusWords) {
-      if (bw.w !== str) continue;
-      const match = bw.cells.length === sel.length && bw.cells.every((cell, i) => cell.r === sel[i].r && cell.c === sel[i].c);
-      if (match) { matchedBonus = bw; break; }
+      if (bw.found) continue;
+      const len = bw.cells.length;
+      if (len !== sel.length) continue;
+      const fwd = bw.w === str &&
+        bw.cells.every((cell, i) => cell.r === sel[i].r && cell.c === sel[i].c);
+      const rev = bw.w === strRev &&
+        bw.cells.every((cell, i) => cell.r === sel[len - 1 - i].r && cell.c === sel[len - 1 - i].c);
+      if (fwd || rev) { matchedBonus = bw; break; }
     }
     if (matchedBonus) {
       if (matchedBonus.found) {
@@ -2230,13 +2238,6 @@ function onBonusWordFound(bw) {
   bw.found = true;
   if (typeof ucUpdateBonusHint === 'function') ucUpdateBonusHint(G.bonusWords);
   G.foundBonusWords.push(bw.w);
-
-  if (window._bonusFoundWords) window._bonusFoundWords.add(bw.w);
-  if (window._bonusUsedWords && window._bonusFoundWords &&
-      [...window._bonusUsedWords].every(w => window._bonusFoundWords.has(w))) {
-    window._bonusUsedWords.clear();
-    window._bonusFoundWords.clear();
-  }
 
   flashCurrentWordResult(bw.w.split(''), 'correct');
 
@@ -2850,22 +2851,19 @@ function resumeGame() {
     initGameBgForCategory(snap.catKey);
     startBgMusic();
     startCatAmbient(snap.catKey);
-    if (typeof ucShowBonusHint === 'function' && G.bonusWords && G.bonusWords.length) {
-  ucShowBonusHint(G.bonusWords);
-}
 animateGameEntry();
 requestAnimationFrame(() => {
   for (const bw of G.bonusWords) {
-        if (!bw.found) continue;
-        bw.cells.forEach(({ r, c }) => {
-          const el = document.querySelector(`.grid-cell[data-r="${r}"][data-c="${c}"]`);
-          if (el) el.classList.add('bonus-cell');
-        });
-      }
-      if (typeof ucShowBonusHint === 'function' && G.bonusWords && G.bonusWords.length) {
-        ucShowBonusHint(G.bonusWords);
-      }
+    if (!bw.found) continue;
+    bw.cells.forEach(({ r, c }) => {
+      const el = document.querySelector(`.grid-cell[data-r="${r}"][data-c="${c}"]`);
+      if (el) el.classList.add('bonus-cell');
     });
+  }
+  if (typeof ucShowBonusHint === 'function' && G.bonusWords && G.bonusWords.length) {
+    ucShowBonusHint(G.bonusWords);
+  }
+});
     playSound('shuffle');
   });
 }
